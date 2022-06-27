@@ -1,7 +1,8 @@
+const bcrypt = require('bcryptjs')
 const mongoose = require('mongoose')
 const validator = require('validator')
 
-const User = mongoose.model('User', {
+const schema = mongoose.Schema({
     name: {
         type: String,
         required: true,
@@ -18,6 +19,7 @@ const User = mongoose.model('User', {
     },
     email: {
         type: String,
+        unique: true,
         required: true,
         trim: true,
         lowercase: true,
@@ -39,5 +41,38 @@ const User = mongoose.model('User', {
         }
     }
 })
+
+// Create a new function for the User module
+schema.statics.findByCredentials = async (email, password) => {
+    const user = await User.findOne({ email })
+
+    if (!user) {
+        // Use generic error message to avoid helping a hacker
+        throw new Error('Login failed')
+    }
+    
+    const isMatch = await bcrypt.compare(password, user.password)
+    
+    if (!isMatch) {
+        // Use generic error message to avoid helping a hacker
+        throw new Error('Login failed')
+    }
+
+    return user
+}
+
+// Executes before any mongo save operation
+// Cannot be arrow => function. Must be old school function
+schema.pre('save', async function(next) {
+    const user = this
+
+    if (user.isModified('password')) {
+        user.password = await bcrypt.hash(user.password, 8)
+    }
+
+    next()
+})
+
+const User = mongoose.model('User', schema)
 
 module.exports = User
