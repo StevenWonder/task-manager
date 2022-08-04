@@ -1,6 +1,7 @@
 const bcrypt = require('bcryptjs')
 const mongoose = require('mongoose')
 const validator = require('validator')
+const jwt = require('jsonwebtoken')
 
 const schema = mongoose.Schema({
     name: {
@@ -39,8 +40,25 @@ const schema = mongoose.Schema({
                 throw new Error('Password cannot contain the text "password"')
             }
         }
-    }
+    },
+    tokens: [{
+        token: {
+            type: String,
+            required: true
+        }
+    }]
 })
+
+schema.methods.generateAuthToken = async function () {
+    const user = this
+    const token = jwt.sign({ _id: user.id.toString() }, 'thisismynewcourse')
+    
+    // Save token
+    user.tokens = user.tokens.concat({ token })
+    await user.save()
+
+    return token
+}
 
 // Create a new function for the User module
 schema.statics.findByCredentials = async (email, password) => {
@@ -63,6 +81,7 @@ schema.statics.findByCredentials = async (email, password) => {
 
 // Executes before any mongo save operation
 // Cannot be arrow => function. Must be old school function
+// Hash the user password before saving
 schema.pre('save', async function(next) {
     const user = this
 

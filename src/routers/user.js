@@ -8,7 +8,8 @@ router.post('/users/login', async (req, res) => {
     try {
         const { email, password } = req.body
         const user = await User.findByCredentials(email, password)
-        res.status(200).send(user)
+        const token = await user.generateAuthToken()
+        res.status(200).send({ token, user })
     } catch (e) {
         res.status(400).send('Login unsuccessful :(')
     }
@@ -19,7 +20,8 @@ router.post('/users', async (req, res) => {
 
     try {
         const result = await user.save()
-        res.status(201).send(result)
+        const token = await user.generateAuthToken()
+        res.status(201).send({ result, token })
     } catch (error) {
         res.status(400).send(error)
     }
